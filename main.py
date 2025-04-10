@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-DATABASE_URL = "postgresql://postgres:123456@host.docker.internal:5432/postgres"
+DATABASE_URL = "postgresql://postgres:123456@dok:5432/postgres"  # Ensure the host is reachable
 
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL)
@@ -23,7 +23,12 @@ class Task(Base):
     status = Column(String, index=True)
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Error creating tables: {e}")
+    
+
 @app.get("/")
 def read_root():
     return {"message": "Hello, FastAPI!"}
