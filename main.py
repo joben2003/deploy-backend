@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
@@ -6,6 +7,19 @@ from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
 
 app = FastAPI()
+
+# Add CORS middleware
+origins = [
+    "http://localhost:5173",  # Allow requests from this origin
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DATABASE_URL = "postgresql://postgres:123456@host.docker.internal:5432/postgres"
 
@@ -28,11 +42,6 @@ try:
 except Exception as e:
     print(f"Error creating tables: {e}")
     
-
-@app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI!"}
-
 @app.get("/tasks")
 def read_tasks():
     db = SessionLocal()
