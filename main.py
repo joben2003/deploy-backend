@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-DATABASE_URL = "postgresql://postgres:123456@dok:5432/postgres"  # Ensure the host is reachable
+DATABASE_URL = "postgresql://postgres:123456@host.docker.internal:5432/postgres"
 
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL)
