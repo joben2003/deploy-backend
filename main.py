@@ -1,29 +1,87 @@
 from fastapi import FastAPI
 import uvicorn
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Routes for application for users to add their daily task updates by our team which will have crud operations
+DATABASE_URL = "postgresql://postgres:123456@host.docker.internal:5432/postgres"
 
+# SQLAlchemy setup
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Example model
+class Task(Base):
+    __tablename__ = "tasks"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    date = Column(String, index=True)
+    status = Column(String, index=True)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
 @app.get("/")
 def read_root():
     return {"message": "Hello, FastAPI!"}
 
 @app.get("/tasks")
 def read_tasks():
-    return {"tasks": ["task1", "task2", "task3"]}
+    db = SessionLocal()
+    try:
+        tasks = db.query(Task).all()
+        return {"tasks": [{"id": task.id, "name": task.name, "date": task.date, "status": task.status} for task in tasks]}
+    finally:
+        db.close()
+
+class TaskCreate(BaseModel):
+    name: str
+    date: str
+    status: str
 
 @app.post("/tasks")
-def create_task(task: str):
-    return {"task": task, "status": "created"}
+def create_task(task: TaskCreate):
+    db = SessionLocal()
+    try:
+        new_task = Task(name=task.name, date=task.date, status=task.status)
+        db.add(new_task)
+        db.commit()
+        db.refresh(new_task)
+        return {"task": {"id": new_task.id, "name": new_task.name, "date": new_task.date, "status": new_task.status}}
+    finally:
+        db.close()
 
-@app.post("/tasks/{task_id}")
-def update_task(task_id: int, task: str):
-    return {"task_id": task_id, "task": task, "status": "updated"}
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task: TaskCreate):
+    db = SessionLocal()
+    try:
+        existing_task = db.query(Task).filter(Task.id == task_id).first()
+        if not existing_task:
+            return {"error": "Task not found"}
+        existing_task.name = task.name
+        existing_task.date = task.date
+        existing_task.status = task.status
+        db.commit()
+        db.refresh(existing_task)
+        return {"task": {"id": existing_task.id, "name": existing_task.name, "date": existing_task.date, "status": existing_task.status}}
+    finally:
+        db.close()
 
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: int):
-    return {"task_id": task_id, "status": "deleted"}
+    db = SessionLocal()
+    try:
+        existing_task = db.query(Task).filter(Task.id == task_id).first()
+        if not existing_task:
+            return {"error": "Task not found"}
+        db.delete(existing_task)
+        db.commit()
+        return {"task_id": task_id, "status": "deleted"}
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
