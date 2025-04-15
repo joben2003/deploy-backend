@@ -16,7 +16,7 @@ Jinja2
 markdown-it-py
 MarkupSafe
 mdurl
-psycopg2
+psycopg2-binary
 pydantic
 pydantic_core
 Pygments
